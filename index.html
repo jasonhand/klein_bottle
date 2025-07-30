@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klein Bottle Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .visualization-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .description-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #kleinCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 120px;
+            height: 5px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .info-section p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .mathematical-note {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #e9ecef;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 500px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Klein Bottle</h1>
+            <p class="subtitle">An Interactive Exploration of Non-Orientable Surfaces</p>
+            <p>Named after mathematician Felix Klein (1882)</p>
+        </header>
+
+        <div class="main-content">
+            <div class="visualization-panel">
+                <h2>3D Visualization</h2>
+                <div id="canvas-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading Klein Bottle...
+                    </div>
+                    <canvas id="kleinCanvas"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Rotation Speed</label>
+                        <input type="range" id="rotationSpeed" min="0" max="0.05" step="0.005" value="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label>Detail Level</label>
+                        <input type="range" id="detailLevel" min="20" max="100" step="10" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>Transparency</label>
+                        <input type="range" id="transparency" min="0.1" max="1" step="0.1" value="0.8">
+                    </div>
+                    <button id="toggleAnimation">Pause Animation</button>
+                    <button id="resetView">Reset View</button>
+                </div>
+            </div>
+
+            <div class="description-panel">
+                <div class="info-section">
+                    <h3>What is a Klein Bottle?</h3>
+                    <p>A Klein bottle is a remarkable mathematical surface that has no boundary and is <strong>non-orientable</strong>. This means it's essentially a "one-sided" surface where you could travel along it and return to your starting point upside down!</p>
+                    
+                    <div class="highlight">
+                        <strong>Key Properties:</strong><br>
+                        • No boundary (like a sphere)<br>
+                        • Non-orientable (like a Möbius strip)<br>
+                        • Cannot be embedded in 3D space without self-intersection<br>
+                        • Can be properly embedded in 4D space
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Construction</h3>
+                    <p>To construct a Klein bottle, imagine taking a cylinder and connecting its ends. However, unlike a torus (donut shape), one end must pass through the cylinder's wall before connecting. This creates the characteristic self-intersection you see in the 3D visualization.</p>
+                    
+                    <p>The famous limerick by mathematician Leo Moser describes this beautifully:</p>
+                    <div class="mathematical-note">
+                        "A mathematician named Klein<br>
+                        Thought the Möbius band was divine.<br>
+                        Said he: 'If you glue<br>
+                        The edges of two,<br>
+                        You'll get a weird bottle like mine.'"
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Mathematical Significance</h3>
+                    <p>The Klein bottle is important in topology, the study of geometric properties preserved under continuous deformations. It demonstrates that not all surfaces can be embedded in our familiar 3D space.</p>
+                    
+                    <p><strong>Topology Facts:</strong></p>
+                    <p>• <strong>Euler Characteristic:</strong> 0 (same as a torus)</p>
+                    <p>• <strong>Genus:</strong> 1 (topologically equivalent to a torus)</p>
+                    <p>• <strong>Orientability:</strong> Non-orientable (unlike a torus)</p>
+                    <p>• <strong>Homeomorphic to:</strong> Two projective planes connected</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Real-World Applications</h3>
+                    <p>While the Klein bottle might seem purely theoretical, it has applications in:</p>
+                    <p><strong>Physics:</strong> Understanding space-time topology and quantum field theory</p>
+                    <p><strong>Computer Graphics:</strong> Texture mapping and 3D modeling techniques</p>
+                    <p><strong>Art & Design:</strong> Creating impossible geometric forms</p>
+                    <p><strong>Mathematics:</strong> Studying non-orientable surfaces and higher-dimensional spaces</p>
+                </div>
+
+                <div class="info-section">
+                    <h3>The Fourth Dimension</h3>
+                    <p>In 4D space, a Klein bottle can exist without self-intersection. The visualization above shows the 3D "immersion" - essentially a shadow of the true 4D Klein bottle projected into our 3D world.</p>
+                    
+                    <div class="highlight">
+                        Think of it like this: A 2D being trying to understand a 3D sphere would see it as a circle with mysterious properties. Similarly, we 3D beings see the Klein bottle as a self-intersecting surface, but its true form exists in 4D space.
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>Interactive Controls</h3>
+                    <p><strong>Rotation Speed:</strong> Control how fast the Klein bottle rotates</p>
+                    <p><strong>Detail Level:</strong> Adjust the mesh resolution for more or fewer polygons</p>
+                    <p><strong>Transparency:</strong> Make the surface more transparent to see the internal structure</p>
+                    <p><strong>Animation:</strong> Pause/resume the automatic rotation</p>
+                    <p><strong>Reset View:</strong> Return to the default viewing angle</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class KleinBottleVisualization {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.kleinBottle = null;
+                this.animationId = null;
+                this.isAnimating = true;
+                this.rotationSpeed = 0.01;
+                this.detailLevel = 50;
+                this.transparency = 0.8;
+                
+                this.init();
+                this.setupControls();
+            }
+
+            init() {
+                const container = document.getElementById('canvas-container');
+                const canvas = document.getElementById('kleinCanvas');
+                
+                // Scene setup
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0xf0f0f0);
+                
+                // Camera setup
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    container.clientWidth / container.clientHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(0, 0, 8);
+                
+                // Renderer setup
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: canvas,
+                    antialias: true,
+                    alpha: true
+                });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = true;
+                this.scene.add(directionalLight);
+                
+                const pointLight = new THREE.PointLight(0x667eea, 0.5);
+                pointLight.position.set(-10, -10, -5);
+                this.scene.add(pointLight);
+                
+                // Create Klein bottle
+                this.createKleinBottle();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => this.onWindowResize());
+                
+                // Hide loading screen
+                document.querySelector('.loading').style.display = 'none';
+                canvas.style.display = 'block';
+                
+                // Start animation
+                this.animate();
+            }
+
+            createKleinBottle() {
+                const uSegments = this.detailLevel;
+                const vSegments = this.detailLevel;
+                
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const normals = [];
+                const uvs = [];
+                const indices = [];
+                
+                // Klein bottle parametric equations (figure-8 immersion)
+                for (let i = 0; i <= uSegments; i++) {
+                    const u = (i / uSegments) * Math.PI;
+                    
+                    for (let j = 0; j <= vSegments; j++) {
+                        const v = (j / vSegments) * 2 * Math.PI;
+                        
+                        // Klein bottle parametric equations
+                        const r = 4 * (1 - Math.cos(u) / 2);
+                        let x, y, z;
+                        
+                        if (u < Math.PI / 2) {
+                            x = 6 * Math.cos(u) * (1 + Math.sin(u)) + r * Math.cos(v + Math.PI);
+                            y = 16 * Math.sin(u);
+                            z = r * Math.sin(v + Math.PI);
+                        } else {
+                            x = 6 * Math.cos(u) * (1 + Math.sin(u)) + r * Math.cos(u) * Math.cos(v);
+                            y = 16 * Math.sin(u);
+                            z = r * Math.sin(u) * Math.sin(v);
+                        }
+                        
+                        vertices.push(x * 0.2, y * 0.2, z * 0.2);
+                        
+                        // Calculate normal (approximate)
+                        const normal = new THREE.Vector3(x, y, z).normalize();
+                        normals.push(normal.x, normal.y, normal.z);
+                        
+                        // UV coordinates
+                        uvs.push(i / uSegments, j / vSegments);
+                    }
+                }
+                
+                // Create indices for triangles
+                for (let i = 0; i < uSegments; i++) {
+                    for (let j = 0; j < vSegments; j++) {
+                        const a = i * (vSegments + 1) + j;
+                        const b = (i + 1) * (vSegments + 1) + j;
+                        const c = (i + 1) * (vSegments + 1) + (j + 1);
+                        const d = i * (vSegments + 1) + (j + 1);
+                        
+                        indices.push(a, b, d);
+                        indices.push(b, c, d);
+                    }
+                }
+                
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                geometry.setIndex(indices);
+                geometry.computeVertexNormals();
+                
+                // Create material with gradient effect
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x667eea,
+                    transparent: true,
+                    opacity: this.transparency,
+                    side: THREE.DoubleSide,
+                    shininess: 100,
+                    specular: 0x111111
+                });
+                
+                // Remove old klein bottle
+                if (this.kleinBottle) {
+                    this.scene.remove(this.kleinBottle);
+                }
+                
+                // Create mesh
+                this.kleinBottle = new THREE.Mesh(geometry, material);
+                this.scene.add(this.kleinBottle);
+                
+                // Add wireframe overlay
+                const wireframeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x764ba2,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
+                this.kleinBottle.add(wireframe);
+            }
+
+            setupControls() {
+                const rotationSpeedSlider = document.getElementById('rotationSpeed');
+                const detailLevelSlider = document.getElementById('detailLevel');
+                const transparencySlider = document.getElementById('transparency');
+                const toggleAnimationBtn = document.getElementById('toggleAnimation');
+                const resetViewBtn = document.getElementById('resetView');
+                
+                rotationSpeedSlider.addEventListener('input', (e) => {
+                    this.rotationSpeed = parseFloat(e.target.value);
+                });
+                
+                detailLevelSlider.addEventListener('input', (e) => {
+                    this.detailLevel = parseInt(e.target.value);
+                    this.createKleinBottle();
+                });
+                
+                transparencySlider.addEventListener('input', (e) => {
+                    this.transparency = parseFloat(e.target.value);
+                    if (this.kleinBottle) {
+                        this.kleinBottle.material.opacity = this.transparency;
+                    }
+                });
+                
+                toggleAnimationBtn.addEventListener('click', () => {
+                    this.isAnimating = !this.isAnimating;
+                    toggleAnimationBtn.textContent = this.isAnimating ? 'Pause Animation' : 'Resume Animation';
+                });
+                
+                resetViewBtn.addEventListener('click', () => {
+                    this.camera.position.set(0, 0, 8);
+                    this.camera.lookAt(0, 0, 0);
+                    if (this.kleinBottle) {
+                        this.kleinBottle.rotation.set(0, 0, 0);
+                    }
+                });
+            }
+
+            animate() {
+                this.animationId = requestAnimationFrame(() => this.animate());
+                
+                if (this.isAnimating && this.kleinBottle) {
+                    this.kleinBottle.rotation.x += this.rotationSpeed;
+                    this.kleinBottle.rotation.y += this.rotationSpeed * 0.7;
+                    this.kleinBottle.rotation.z += this.rotationSpeed * 0.3;
+                }
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            onWindowResize() {
+                const container = document.getElementById('canvas-container');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(width, height);
+            }
+        }
+
+        // Initialize the visualization when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new KleinBottleVisualization();
+        });
+    </script>
+</body>
+</html>
